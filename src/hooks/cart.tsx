@@ -37,12 +37,29 @@ const CartProvider: React.FC = ({ children }) => {
   }, []);
 
   const addToCart = useCallback(async product => {
-    // TODO ADD A NEW ITEM TO THE CART
+    //ADD A NEW ITEM TO THE CART
+    let newProduct: Product = await product;
+
+    if (products.indexOf(newProduct) === -1) {
+      newProduct.quantity = 1;
+      products.push(newProduct);
+    } else {
+      increment(newProduct.id);
+    }
   }, []);
 
   const increment = useCallback(async id => {
-    // TODO INCREMENTS A PRODUCT QUANTITY IN THE CART
+    // INCREMENTS A PRODUCT QUANTITY IN THE CART
+    const searchId = await id;
+    const index =
+      products.findIndex(
+        (item) => { return item.id == searchId }
+        , searchId);
+
+    products[index].quantity++
   }, []);
+
+
 
   const decrement = useCallback(async id => {
     // TODO DECREMENTS A PRODUCT QUANTITY IN THE CART
@@ -52,6 +69,7 @@ const CartProvider: React.FC = ({ children }) => {
     () => ({ addToCart, increment, decrement, products }),
     [products, addToCart, increment, decrement],
   );
+
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
