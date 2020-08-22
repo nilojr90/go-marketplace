@@ -6,6 +6,8 @@ import React, {
   useEffect,
 } from 'react';
 
+import api from '../services/api';
+
 import AsyncStorage from '@react-native-community/async-storage';
 
 interface Product {
@@ -31,6 +33,17 @@ const CartProvider: React.FC = ({ children }) => {
   useEffect(() => {
     async function loadProducts(): Promise<void> {
       // TODO LOAD ITEMS FROM ASYNC STORAGE
+
+      const response = await api.get("/products");
+
+      if (response.status === 200) {
+        let newProducts: Product[] = response.data;
+
+        newProducts.forEach(item => {
+          item.quantity = 0;
+        });
+        setProducts(newProducts);
+      }
     }
 
     loadProducts();
@@ -38,32 +51,58 @@ const CartProvider: React.FC = ({ children }) => {
 
   const addToCart = useCallback(async product => {
     //ADD A NEW ITEM TO THE CART
-    let newProduct: Product = await product;
+    let addedProduct: Product = await product;
+    addedProduct.quantity = 1;
 
-    if (products.indexOf(newProduct) === -1) {
-      newProduct.quantity = 1;
-      products.push(newProduct);
+    const index =
+      products.findIndex(
+        (item) => { return item.id == addedProduct.id }
+        , addedProduct.id);
+
+    console.log(index);
+    if (index === -1) {
+      let newProducts = [...products, addedProduct];
+      newProducts.sort((a, b) => (a.id.localeCompare(b.id)));
+      setProducts([...newProducts]);
     } else {
-      increment(newProduct.id);
+      increment(addedProduct.id);
     }
-  }, []);
+
+  }, [products]);
 
   const increment = useCallback(async id => {
     // INCREMENTS A PRODUCT QUANTITY IN THE CART
     const searchId = await id;
+    console.log("+ " + searchId);
     const index =
       products.findIndex(
         (item) => { return item.id == searchId }
         , searchId);
 
-    products[index].quantity++
-  }, []);
+    if (index !== -1) {
+      let newProducts = products;
+      newProducts[index].quantity++;
+      setProducts([...newProducts]);
+    }
+  }, [products]);
 
 
 
   const decrement = useCallback(async id => {
-    // TODO DECREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+    // DECREMENTS A PRODUCT QUANTITY IN THE CART
+    const searchId = await id;
+    console.log("- " + searchId);
+    const index =
+      products.findIndex(
+        (item) => { return item.id == searchId }
+        , searchId);
+
+    if (index !== -1) {
+      let newProducts = products;
+      newProducts[index].quantity--;
+      setProducts([...newProducts]);
+    }
+  }, [products]);
 
   const value = React.useMemo(
     () => ({ addToCart, increment, decrement, products }),
