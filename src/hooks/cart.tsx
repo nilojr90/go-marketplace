@@ -6,7 +6,6 @@ import React, {
   useEffect,
 } from 'react';
 
-import api from '../services/api';
 
 import AsyncStorage from '@react-native-community/async-storage';
 
@@ -32,22 +31,39 @@ const CartProvider: React.FC = ({ children }) => {
 
   useEffect(() => {
     async function loadProducts(): Promise<void> {
-      // TODO LOAD ITEMS FROM ASYNC STORAGE
+      // LOAD ITEMS FROM ASYNC STORAGE
 
-      const response = await api.get("/products");
-
-      if (response.status === 200) {
-        let newProducts: Product[] = response.data;
-
-        newProducts.forEach(item => {
-          item.quantity = 0;
-        });
+      const newProducts = await loadCart();
+      if (newProducts != null) {
         setProducts(newProducts);
       }
     }
 
     loadProducts();
   }, []);
+
+  const saveCart = async (products: Product[]) => {
+    try {
+      const jsonProducts = JSON.stringify(products);
+      await AsyncStorage.setItem('@gomarketplace-cart', jsonProducts);
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  const loadCart = async (): Promise<Product[] | null> => {
+    let products = null;
+    try {
+      const jsonProducts = await AsyncStorage.getItem('@gomarketplace-cart');
+
+      if (jsonProducts != null) {
+        products = JSON.parse(jsonProducts);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+    return products;
+  };
 
   const addToCart = useCallback(async product => {
     //ADD A NEW ITEM TO THE CART
@@ -64,6 +80,7 @@ const CartProvider: React.FC = ({ children }) => {
       let newProducts = [...products, addedProduct];
       newProducts.sort((a, b) => (a.id.localeCompare(b.id)));
       setProducts([...newProducts]);
+      saveCart(newProducts);
     } else {
       increment(addedProduct.id);
     }
@@ -81,8 +98,12 @@ const CartProvider: React.FC = ({ children }) => {
 
     if (index !== -1) {
       let newProducts = products;
+      if (isNaN(newProducts[index].quantity)) {
+        newProducts[index].quantity = 0;
+      }
       newProducts[index].quantity++;
       setProducts([...newProducts]);
+      saveCart(newProducts);
     }
   }, [products]);
 
@@ -101,6 +122,7 @@ const CartProvider: React.FC = ({ children }) => {
       let newProducts = products;
       newProducts[index].quantity--;
       setProducts([...newProducts]);
+      saveCart(newProducts);
     }
   }, [products]);
 
